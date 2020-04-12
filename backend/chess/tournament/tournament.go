@@ -1,7 +1,6 @@
 package tournament
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -20,19 +19,11 @@ type Tournament struct {
 	matches []*match.Match
 }
 
-func New() *Tournament {
-	return &Tournament{}
-}
-
-func (t *Tournament) AddUsers(users ...*user.User) {
-	for _, u := range users {
-		fmt.Println(*u.Name)
-	}
+func New(users []*user.User) *Tournament {
+	return &Tournament{users: users}
 }
 
 func (t *Tournament) Start() {
-	fmt.Println("Tournament starting...")
-
 	if len(t.users)%2 != 0 {
 		panic("Tournament has started without sufficient numbers")
 	}
@@ -40,12 +31,15 @@ func (t *Tournament) Start() {
 	users := shuffleUsers(t.users)
 	matches := make([]*match.Match, len(users)/2)
 
-	for i := 0; i < len(matches); i += 1 {
+	for i := 0; i < len(matches); i++ {
 		m := match.New(users[i*2], users[i*2+1])
 		matches[i] = m
 
+		// Run each game in its own thread.
 		go m.Start()
 	}
+
+	// Block until end of tournament...
 }
 
 func shuffleUsers(users []*user.User) []*user.User {

@@ -27,6 +27,10 @@ type RegisterEvent struct {
 	Name string `json:"name"`
 }
 
+type UserMovedEvent struct {
+	Move string `json:"move"`
+}
+
 func ParseRawEvent(t int, msg []byte) (*HubEvent, error) {
 	if t != websocket.TextMessage {
 		return nil, errors.New("Invalid websocket event type")
@@ -37,16 +41,25 @@ func ParseRawEvent(t int, msg []byte) (*HubEvent, error) {
 		return nil, errors.Wrap(ErrParsing, err.Error())
 	}
 
+	// Bloody Go and it's no bloody generics.
 	switch raw.Action {
 	case UserRegister:
-		var re RegisterEvent
-		if err := json.Unmarshal(raw.Payload, &re); err != nil {
+		var val RegisterEvent
+		if err := json.Unmarshal(raw.Payload, &val); err != nil {
 			return nil, errors.Wrap(ErrParsing, err.Error())
 		}
-
 		return &HubEvent{
 			Action:  raw.Action,
-			Payload: re,
+			Payload: val,
+		}, nil
+	case UserMoved:
+		var val UserMovedEvent
+		if err := json.Unmarshal(raw.Payload, &val); err != nil {
+			return nil, errors.Wrap(ErrParsing, err.Error())
+		}
+		return &HubEvent{
+			Action:  raw.Action,
+			Payload: val,
 		}, nil
 	}
 

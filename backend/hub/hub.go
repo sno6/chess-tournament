@@ -16,7 +16,8 @@ import (
 const wsPath = "/ws/hub"
 
 type Hub struct {
-	users map[*websocket.Conn]*user.User
+	activeTournaments []*tournament.Tournament
+	users             map[*websocket.Conn]*user.User
 
 	connector *connection.Connector
 	events    chan *event.HubEvent
@@ -63,6 +64,13 @@ func (h *Hub) startEventListener() {
 			err = h.disconnect(e)
 		case event.UserRegister:
 			err = h.userRegister(e)
+		case event.UserMoved:
+			err = h.userMoved(e)
+			break
+		case event.UserOfferedDraw:
+			break
+		case event.UserResigned:
+			break
 		}
 
 		if err != nil {
@@ -72,7 +80,7 @@ func (h *Hub) startEventListener() {
 }
 
 func (h *Hub) connect(e *event.HubEvent) error {
-	h.users[e.Conn] = &user.User{Name: nil}
+	h.users[e.Conn] = &user.User{Name: nil, Conn: e.Conn}
 	return nil
 }
 
@@ -87,30 +95,44 @@ func (h *Hub) userRegister(e *event.HubEvent) error {
 		return event.ErrParsing
 	}
 
-	// Set user profile data.
 	h.users[e.Conn].Name = &re.Name
-
-	fmt.Printf("Registering new user %v\n", &re.Name)
+	h.users[e.Conn].Registered = true
 
 	// If there are enough users registered start a tournament.
-	users := h.registeredUsers()
-	fmt.Println(len(users))
-
+	users := h.readyUsers()
 	if len(users) == tournament.MinNeededUsers {
-		tourny := tournament.New()
-		tourny.AddUsers(users...)
-		tourny.Start()
+		tourny := tournament.New(users)
+		go tourny.Start()
+
+		h.activeTournaments = append(h.activeTournaments, tourny)
 	}
 
 	return nil
 }
 
-func (h *Hub) registeredUsers() []*user.User {
+func (h *Hub) userMoved(e *event.HubEvent) error {
+	move, ok := e.Payload.(event.UserMovedEvent)
+	if !ok {
+		return event.ErrParsing
+	}
+
+	// Find the tournament this user is in, pass through
+	// Find game in tournament, pass through.
+	// Check legality.
+	fmt.Println(move.Move)
+
+	return nil
+}
+
+func (h *Hub) readyUsers() []*user.User {
 	var users []*user.User
+
 	for _, u := range h.users {
-		if u.Name != nil {
+		// Get all users that are registered, connected and not currently in a tournament.
+		if u.Registered == true && !u.InTournament {
 			users = append(users, u)
 		}
 	}
+
 	return users
 }

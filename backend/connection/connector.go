@@ -36,6 +36,11 @@ func NewConnector(logger *log.Logger, events chan *event.HubEvent) *Connector {
 	}
 }
 
+func WriteEvent(conn *websocket.Conn, event *event.HubEvent) error {
+	// Write the event to the connection?
+	return nil
+}
+
 func (c *Connector) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -75,7 +80,7 @@ func (c *Connector) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// There was an unexpected connection closure, notify the hub and safely disconnect.
+	// There was an unexpected issue closure, notify the hub and safely disconnect.
 	conn.Close()
 	c.events <- &event.HubEvent{
 		Action: event.Disconnect,

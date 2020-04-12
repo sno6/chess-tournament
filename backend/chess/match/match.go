@@ -1,8 +1,6 @@
 package match
 
 import (
-	"fmt"
-
 	"github.com/sno6/chess-tournament/backend/user"
 )
 
@@ -19,5 +17,18 @@ func New(black *user.User, white *user.User) *Match {
 }
 
 func (m *Match) Start() {
-	fmt.Println("Starting match")
+	// game := chess.NewGame()
+
+	// Get input
+	for {
+		// Get white move.
+		// Check validity.
+		// Check result from move..
+		// Broadcast to users...
+
+		// Get Black move.
+		// Check validity.
+		// Check result from move...
+		// Broadcast move to users...
+	}
 }
