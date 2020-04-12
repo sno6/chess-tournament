@@ -1,13 +1,12 @@
 package connection
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/sno6/chess-tournament/event"
+	"github.com/sno6/chess-tournament/backend/event"
 )
 
 const (
@@ -20,14 +19,17 @@ const (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool { // REMNOVE
+		return true
+	},
 }
 
 type Connector struct {
 	logger *log.Logger
-	events chan *event.Event
+	events chan *event.HubEvent
 }
 
-func NewConnector(logger *log.Logger, events chan *event.Event) *Connector {
+func NewConnector(logger *log.Logger, events chan *event.HubEvent) *Connector {
 	return &Connector{
 		logger: logger,
 		events: events,
@@ -45,7 +47,7 @@ func (c *Connector) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	conn.SetPongHandler(func(string) error { conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
 	// Register the new connection with the hub.
-	c.events <- &event.Event{
+	c.events <- &event.HubEvent{
 		Action: event.Connect,
 		Conn:   conn,
 	}
@@ -60,12 +62,22 @@ func (c *Connector) HandleConnection(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		fmt.Printf("Recieved message of type: %v and data: %v\n", t, msg)
+		hubEvent, err := event.ParseRawEvent(t, msg)
+		if err != nil {
+			c.logger.Printf("Error parsing raw event: %v", err)
+			continue
+		}
+
+		c.events <- &event.HubEvent{
+			Action:  hubEvent.Action,
+			Payload: hubEvent.Payload,
+			Conn:    conn,
+		}
 	}
 
 	// There was an unexpected connection closure, notify the hub and safely disconnect.
 	conn.Close()
-	c.events <- &event.Event{
+	c.events <- &event.HubEvent{
 		Action: event.Disconnect,
 		Conn:   conn,
 	}

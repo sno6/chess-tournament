@@ -1,6 +1,6 @@
 package event
 
-type Action int
+type Action uint
 
 const (
 	// System actions.
@@ -8,5 +8,5 @@ const (
 	Disconnect
 
 	// User actions.
-	Register
+	UserRegister
 )

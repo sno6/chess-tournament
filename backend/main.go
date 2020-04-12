@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/sno6/chess-tournament/hub"
+	"github.com/sno6/chess-tournament/backend/hub"
 )
 
 const defaultAddr string = ":8080"
