@@ -72,29 +72,30 @@ func (h *Hub) startEventListener() {
 }
 
 func (h *Hub) connect(e *event.HubEvent) error {
-	fmt.Println("Connection")
-
 	h.users[e.Conn] = &user.User{Name: nil}
 	return nil
 }
 
 func (h *Hub) disconnect(e *event.HubEvent) error {
-	fmt.Println("Disconnect")
-
 	delete(h.users, e.Conn)
 	return nil
 }
 
 func (h *Hub) userRegister(e *event.HubEvent) error {
-	fmt.Println("User Register")
-
-	fmt.Printf("+%v\n", e)
-
-	if _, ok := e.Payload.(*event.RegisterEvent); !ok {
+	re, ok := e.Payload.(event.RegisterEvent)
+	if !ok {
 		return event.ErrParsing
 	}
 
+	// Set user profile data.
+	h.users[e.Conn].Name = &re.Name
+
+	fmt.Printf("Registering new user %v\n", &re.Name)
+
+	// If there are enough users registered start a tournament.
 	users := h.registeredUsers()
+	fmt.Println(len(users))
+
 	if len(users) == tournament.MinNeededUsers {
 		tourny := tournament.New()
 		tourny.AddUsers(users...)
