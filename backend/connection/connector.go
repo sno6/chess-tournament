@@ -51,6 +51,8 @@ func (c *Connector) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error { conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
+	go c.startPingHandler(conn)
+
 	// Register the new connection with the hub.
 	c.events <- &event.HubEvent{
 		Action: event.Connect,
@@ -85,5 +87,25 @@ func (c *Connector) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	c.events <- &event.HubEvent{
 		Action: event.Disconnect,
 		Conn:   conn,
+	}
+}
+
+func (c *Connector) startPingHandler(conn *websocket.Conn) {
+	ticker := time.NewTicker(pingPeriod)
+
+	defer func() {
+		ticker.Stop()
+		conn.Close()
+	}()
+
+	for {
+		select {
+		case <-ticker.C:
+			conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				c.logger.Printf("Error pinging client: %v\n", err)
+				return
+			}
+		}
 	}
 }
