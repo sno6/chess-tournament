@@ -1,9 +1,18 @@
+import Chess, {ChessInstance} from 'chess.js'
 import GameAction from './GameAction'
 
 class ChessService {
-
   private ws: WebSocket | null = null
   private _isConnected = false
+  private _chessJsInstance = new Chess()
+
+  get chessInstance(): ChessInstance {
+    return this._chessJsInstance
+  }
+
+  get isConnected(): boolean {
+    return this._isConnected
+  }
 
   connect() {
     const wsUrl = process.env.REACT_APP_WS_URL
@@ -30,10 +39,6 @@ class ChessService {
     this.ws.onerror = error => {
       console.error('Websocket error:', error)
     }
-  }
-
-  isConnected() {
-    return this._isConnected
   }
 
   send(action: GameAction, payload?: object) {

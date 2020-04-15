@@ -1,6 +1,6 @@
-import React, {useEffect, useMemo, useState} from 'react'
+import React, {useState} from 'react'
 import styled from 'styled-components'
-import Chess, {Square} from 'chess.js'
+import {Square} from 'chess.js'
 
 import BoardCell from './BoardCell'
 import ChessService from '../utils/ChessService'
@@ -32,42 +32,31 @@ const ChessBoard: React.FC = () => {
   const [selectedSquare, setSelectedSquare] = useState<null | Square>(null)
   const [hoverPosition, setHoverPosition] = useState<null | number[]>(null)
 
-  const chess = useMemo(() => new Chess(), [])
-  const player: any = chess.BLACK
-  const isInverted = player === chess.BLACK
-
-  useEffect(() => {
-    console.log(chess)
-    ChessService.connect()
-
-    setTimeout(() => {
-      if (ChessService.isConnected()) {
-        ChessService.send(2, {name: 'David'})
-      }
-    }, 5000)
-  }, [])
+  const { chessInstance } = ChessService
+  const player: any = chessInstance.BLACK
+  const isInverted = player === chessInstance.BLACK
 
   const onBoardClick = (evt: React.MouseEvent) => {
-    if (chess.game_over()) {
+    if (chessInstance.game_over()) {
       // do nothing
       return
     }
     const position = getPositionFromEvent(evt.nativeEvent, isInverted)
     const square = getSquareFromPosition(position)
-    const piece = chess.get(square)
+    const piece = chessInstance.get(square)
 
     if (selectedSquare) {
       if (selectedSquare === square) {
         // previously selected square clicked again, deselect it
         setSelectedSquare(null)
       } else {
-        const selectedPiece = chess.get(selectedSquare)
+        const selectedPiece = chessInstance.get(selectedSquare)
         if (piece && selectedPiece && piece.color === selectedPiece.color) {
           // different piece selected by the user
           setSelectedSquare(square)
         } else {
           // attempt to make the move
-          const move = chess.move({
+          const move = chessInstance.move({
             from: selectedSquare,
             to: square
           })
@@ -79,7 +68,7 @@ const ChessBoard: React.FC = () => {
           }
         }
       }
-    } else if (piece && piece.color === chess.turn()) {
+    } else if (piece && piece.color === chessInstance.turn()) {
       // If a piece is on the clicked square and is the same color as whose turn it is, select it
       setSelectedSquare(square)
     }
@@ -95,12 +84,12 @@ const ChessBoard: React.FC = () => {
   }
 
   const legalMoves = selectedSquare
-    ? chess.moves({ square: selectedSquare, verbose: true })
+    ? chessInstance.moves({ square: selectedSquare, verbose: true })
       .map(move => move.to)
     : []
 
   // TODO optimise by making board component state, only updating it when a move is made
-  const board = chess.board()
+  const board = chessInstance.board()
   const cells: Array<{ cell: JSX.Element; index: number}> = []
 
   board.forEach((row, i) => {
@@ -122,17 +111,18 @@ const ChessBoard: React.FC = () => {
       const isLegalMove = legalMoves.includes(square)
 
       const isCheckmate = !!piece &&
-        piece.type === chess.KING &&
-        piece.color === chess.turn() &&
-        chess.in_checkmate()
+        piece.type === chessInstance.KING &&
+        piece.color === chessInstance.turn() &&
+        chessInstance.in_checkmate()
 
       const isInCheck = !!piece &&
-        piece.type === chess.KING &&
-        piece.color === chess.turn() &&
+        piece.type === chessInstance.KING &&
+        piece.color === chessInstance.turn() &&
         !isCheckmate &&
-        chess.in_check()
+        chessInstance.in_check()
 
       const cell = <BoardCell
+        key={index}
         piece={piece}
         isAlternate={isAlternate}
         isHovered={isHovered}
