@@ -25,7 +25,7 @@ type RawEvent struct {
 
 type LobbyUpdateEvent struct {
 	Connected  int      `json:"connected"`
-	Registered []string `json:"registered`
+	Registered []string `json:"registered"`
 }
 
 type RegisterEvent struct {
