@@ -1,51 +1,106 @@
 package match
 
 import (
-	"time"
+	"fmt"
+	"log"
 
 	"github.com/notnil/chess"
+	"github.com/sno6/chess-tournament/backend/connection"
+	"github.com/sno6/chess-tournament/backend/event"
 	"github.com/sno6/chess-tournament/backend/user"
 )
 
 type Match struct {
+	game  *chess.Game
 	Black *user.User
 	White *user.User
 }
 
 type Result struct {
-	Match *Match
-
-	Winner *user.User
-	Method chess.Method
+	Winner  *user.User
+	Outcome chess.Outcome
 }
 
 func New(black *user.User, white *user.User) *Match {
 	return &Match{
+		game:  chess.NewGame(),
 		Black: black,
 		White: white,
 	}
 }
 
 func (m *Match) Start(resultChan chan<- *Result) {
-	// game := chess.NewGame()
-	time.Sleep(time.Second * 15)
+	fmt.Println("Game started")
+	fmt.Printf("%s is black\n", *m.Black.Name)
+	fmt.Printf("%s is white\n", *m.White.Name)
 
-	res := &Result{
-		Winner: m.White,
-		Method: chess.Checkmate,
+	for {
+		m.handleMove(m.White)
+		if m.game.Outcome() != chess.NoOutcome {
+			break
+		}
+
+		m.broadcastTable()
+
+		m.handleMove(m.Black)
+		if m.game.Outcome() != chess.NoOutcome {
+			break
+		}
+
+		m.broadcastTable()
 	}
 
-	resultChan <- res
-	// Get input
-	// for {
-	// Get white move.
-	// Check validity.
-	// Check result from move..
-	// Broadcast to users...
+	var winner *user.User
+	if m.game.Outcome() == chess.BlackWon {
+		winner = m.Black
+	} else if m.game.Outcome() == chess.WhiteWon {
+		winner = m.White
+	}
 
-	// Get Black move.
-	// Check validity.
-	// Check result from move...
-	// Broadcast move to users...
-	// }
+	resultChan <- &Result{
+		Winner:  winner,
+		Outcome: m.game.Outcome(),
+	}
+}
+
+func (m *Match) broadcastTable() {
+	for _, u := range []*user.User{m.White, m.Black} {
+		go func(u *user.User) {
+			err := connection.WriteEvent(u, &event.HubEvent{
+				Action: event.BoardState,
+				Payload: &event.BoardStateEvent{
+					State: m.game.FEN(),
+				},
+			})
+			if err != nil {
+				log.Println("Error reporting to client about error lol")
+			}
+		}(u)
+	}
+}
+
+func (m *Match) handleMove(u *user.User) string {
+	// TODO: Implement some sane timeout here.
+
+	for {
+		move := <-u.MoveStream
+		err := m.game.MoveStr(move)
+
+		if err == nil {
+			return move
+		}
+
+		log.Printf("Illegal move detected: %s\n", move)
+
+		// handle err.
+		err = connection.WriteEvent(u, &event.HubEvent{
+			Action: event.InvalidMove,
+			Payload: &event.UserMovedEvent{
+				Move: move,
+			},
+		})
+		if err != nil {
+			log.Println("Error reporting to client about error lol")
+		}
+	}
 }

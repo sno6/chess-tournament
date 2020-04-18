@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sno6/chess-tournament/backend/event"
+	"github.com/sno6/chess-tournament/backend/user"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool { // REMNOVE
+	CheckOrigin: func(r *http.Request) bool { // TODO: Remove eventually.
 		return true
 	},
 }
@@ -36,9 +37,9 @@ func NewConnector(logger *log.Logger, events chan *event.HubEvent) *Connector {
 	}
 }
 
-func WriteEvent(conn *websocket.Conn, event *event.HubEvent) error {
-	// Write the event to the connection?
-	return nil
+func WriteEvent(u *user.User, event *event.HubEvent) error {
+	u.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+	return u.Conn.WriteJSON(event)
 }
 
 func (c *Connector) HandleConnection(w http.ResponseWriter, r *http.Request) {
@@ -47,10 +48,7 @@ func (c *Connector) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		c.logger.Printf("Error initialising new connection: %v\n", err)
 	}
 
-	conn.SetReadLimit(maxMessageSize)
-	conn.SetReadDeadline(time.Now().Add(pongWait))
-	conn.SetPongHandler(func(string) error { conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
-
+	c.setPongHandler(conn)
 	go c.startPingHandler(conn)
 
 	// Register the new connection with the hub.
@@ -59,7 +57,6 @@ func (c *Connector) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		Conn:   conn,
 	}
 
-	// Handle the connection lifecycle.
 	for {
 		t, msg, err := conn.ReadMessage()
 		if err != nil {
@@ -88,6 +85,12 @@ func (c *Connector) HandleConnection(w http.ResponseWriter, r *http.Request) {
 		Action: event.Disconnect,
 		Conn:   conn,
 	}
+}
+
+func (c *Connector) setPongHandler(conn *websocket.Conn) {
+	conn.SetReadLimit(maxMessageSize)
+	conn.SetReadDeadline(time.Now().Add(pongWait))
+	conn.SetPongHandler(func(string) error { conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 }
 
 func (c *Connector) startPingHandler(conn *websocket.Conn) {

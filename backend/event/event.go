@@ -13,9 +13,9 @@ var (
 )
 
 type HubEvent struct {
-	Action  Action
-	Payload interface{}
-	Conn    *websocket.Conn
+	Action  Action          `json:"action"`
+	Payload interface{}     `json:"payload"`
+	Conn    *websocket.Conn `json:"-"`
 }
 
 type RawEvent struct {
@@ -29,6 +29,14 @@ type RegisterEvent struct {
 
 type UserMovedEvent struct {
 	Move string `json:"move"`
+}
+
+type BoardStateEvent struct {
+	State string `json:"state"`
+}
+
+type TournamentEndedEvent struct {
+	Winner string `json:"winner"`
 }
 
 func ParseRawEvent(t int, msg []byte) (*HubEvent, error) {

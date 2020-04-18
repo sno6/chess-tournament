@@ -1,11 +1,13 @@
 package tournament
 
 import (
-	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
 	"github.com/sno6/chess-tournament/backend/chess/match"
+	"github.com/sno6/chess-tournament/backend/connection"
+	"github.com/sno6/chess-tournament/backend/event"
 	"github.com/sno6/chess-tournament/backend/user"
 )
 
@@ -30,48 +32,53 @@ func New(users []*user.User) *Tournament {
 }
 
 func (t *Tournament) Start() {
-	fmt.Println("Tournament started, goodluck")
+	t.shuffleUsers()
+	t.setUserStatus(user.InMatch)
 
-	if len(t.users)%2 != 0 {
-		panic("Tournament has started without sufficient numbers")
-	}
+	t.broadcast(&event.HubEvent{
+		Action:  event.TournamentStarted,
+		Payload: nil,
+	})
 
-	// t.shuffleUsers()
-	t.setUserStatus(true)
-
-	matches := make([]*match.Match, len(t.users)/2)
-	for i := 0; i < len(matches); i++ {
+	// Setup the first round matches..
+	roundOne := make([]*match.Match, len(t.users)/2)
+	for i := 0; i < len(roundOne); i++ {
 		m := match.New(t.users[i*2], t.users[i*2+1])
-		matches[i] = m
+		roundOne[i] = m
 
-		// Run each game in its own thread.
 		go m.Start(t.resultsChan)
 	}
 
-	// Block until all of the games in the tournament have been completed.
-	var matchesCompleted int
-	for {
-		res := <-t.resultsChan
+	// Result of the match.
+	res := <-t.resultsChan
 
-		fmt.Printf("Game Finished: %v won\n", *res.Winner.Name)
-		matchesCompleted++
+	t.broadcast(&event.HubEvent{
+		Action: event.TournamentEnded,
+		Payload: &event.TournamentEndedEvent{
+			Winner: *res.Winner.Name,
+		},
+	})
 
-		if matchesCompleted == len(matches) {
-			break
-		}
-	}
-
-	fmt.Println("All games are finished... who won?")
-	t.setUserStatus(false)
+	t.setUserStatus(user.InTournamentLobby)
 }
 
 func (t *Tournament) shuffleUsers() {
 	rand.Shuffle(len(t.users), func(i, j int) { t.users[i], t.users[j] = t.users[j], t.users[i] })
 }
 
-func (t *Tournament) setUserStatus(inTourny bool) {
+func (t *Tournament) setUserStatus(status user.Status) {
 	for _, u := range t.users {
-		fmt.Printf("Setting %s tourny val to %v\n", *u.Name, inTourny)
-		u.InTournament = inTourny
+		u.Status = status
+	}
+}
+
+func (t *Tournament) broadcast(e *event.HubEvent) {
+	for _, u := range t.users {
+		go func(u *user.User) {
+			err := connection.WriteEvent(u, e)
+			if err != nil {
+				log.Printf("Error writing event to user %s\n", *u.Name)
+			}
+		}(u)
 	}
 }

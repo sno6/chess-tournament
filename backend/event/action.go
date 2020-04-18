@@ -12,8 +12,12 @@ const (
 	UserMoved
 	UserResigned
 	UserOfferedDraw
+	UserAcceptedDraw
 
 	// User sent actions.
+	InvalidMove
 	BoardState
-	GameOutcome
+	MatchOutcome
+	TournamentStarted
+	TournamentEnded
 )

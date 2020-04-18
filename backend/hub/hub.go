@@ -1,6 +1,7 @@
 package hub
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 )
 
 const wsPath = "/ws/hub"
+const pollDuration = 10 * time.Second
 
 type Hub struct {
 	mux   sync.Mutex
@@ -82,14 +84,14 @@ func (h *Hub) startEventListener() {
 	}
 }
 
+// tournamentPoller polls every N seconds and starts a tournament with members
+// of the lobby (not in a current tournament).
 func (h *Hub) tournamentPoller() {
-	t := time.NewTicker(time.Second * 10)
+	t := time.NewTicker(pollDuration)
 	for _ = range t.C {
-		// How many users are waiting to get into a tournament?
 		users := h.eligibleUsers()
-		fmt.Printf("%d users waiting for a tournament\n", len(users))
-
-		if len(users) >= tournament.MinNeededUsers {
+		fmt.Println(len(users), " are ready for tournament")
+		if len(users) == tournament.MinNeededUsers {
 			tourny := tournament.New(users)
 			go tourny.Start()
 		}
@@ -98,7 +100,7 @@ func (h *Hub) tournamentPoller() {
 
 func (h *Hub) connect(e *event.HubEvent) error {
 	h.mux.Lock()
-	h.users[e.Conn] = &user.User{Name: nil, Conn: e.Conn}
+	h.users[e.Conn] = &user.User{Name: nil, Conn: e.Conn, MoveStream: make(chan string)}
 	h.mux.Unlock()
 
 	return nil
@@ -128,12 +130,23 @@ func (h *Hub) userRegister(e *event.HubEvent) error {
 }
 
 func (h *Hub) userMoved(e *event.HubEvent) error {
+	u := h.users[e.Conn]
+	if u.Status != user.InMatch {
+		return errors.New("invalid move: user is not currently in a game")
+	}
+
 	move, ok := e.Payload.(event.UserMovedEvent)
 	if !ok {
 		return event.ErrParsing
 	}
 
-	fmt.Println(move.Move)
+	// Only send the move if its this users turn..
+	select {
+	case u.MoveStream <- move.Move:
+		break
+	default:
+		break
+	}
 
 	return nil
 }
@@ -142,7 +155,7 @@ func (h *Hub) eligibleUsers() []*user.User {
 	var users []*user.User
 
 	for _, u := range h.users {
-		if u.Registered == true && !u.InTournament {
+		if u.Registered == true && u.Status == user.InTournamentLobby {
 			users = append(users, u)
 		}
 	}
