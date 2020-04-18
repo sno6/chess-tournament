@@ -17,7 +17,8 @@ const (
 	// User sent actions.
 	InvalidMove
 	BoardState
+	MatchStarted
 	MatchOutcome
 	TournamentStarted
-	TournamentEnded
+	TournamentOutcome
 )

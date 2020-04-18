@@ -35,8 +35,13 @@ type BoardStateEvent struct {
 	State string `json:"state"`
 }
 
-type TournamentEndedEvent struct {
+type TournamentOutcomeEvent struct {
 	Winner string `json:"winner"`
+}
+
+type MatchStartedEvent struct {
+	White string `json:"white"`
+	Black string `json:"black"`
 }
 
 func ParseRawEvent(t int, msg []byte) (*HubEvent, error) {

@@ -53,8 +53,8 @@ func (t *Tournament) Start() {
 	res := <-t.resultsChan
 
 	t.broadcast(&event.HubEvent{
-		Action: event.TournamentEnded,
-		Payload: &event.TournamentEndedEvent{
+		Action: event.TournamentOutcome,
+		Payload: &event.TournamentOutcomeEvent{
 			Winner: *res.Winner.Name,
 		},
 	})

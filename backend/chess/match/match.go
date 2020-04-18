@@ -1,7 +1,6 @@
 package match
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/notnil/chess"
@@ -30,9 +29,13 @@ func New(black *user.User, white *user.User) *Match {
 }
 
 func (m *Match) Start(resultChan chan<- *Result) {
-	fmt.Println("Game started")
-	fmt.Printf("%s is black\n", *m.Black.Name)
-	fmt.Printf("%s is white\n", *m.White.Name)
+	m.broadcast(&event.HubEvent{
+		Action: event.MatchStarted,
+		Payload: &event.MatchStartedEvent{
+			White: *m.White.Name,
+			Black: *m.Black.Name,
+		},
+	})
 
 	for {
 		m.handleMove(m.White)
@@ -40,14 +43,24 @@ func (m *Match) Start(resultChan chan<- *Result) {
 			break
 		}
 
-		m.broadcastTable()
+		m.broadcast(&event.HubEvent{
+			Action: event.BoardState,
+			Payload: &event.BoardStateEvent{
+				State: m.game.FEN(),
+			},
+		})
 
 		m.handleMove(m.Black)
 		if m.game.Outcome() != chess.NoOutcome {
 			break
 		}
 
-		m.broadcastTable()
+		m.broadcast(&event.HubEvent{
+			Action: event.BoardState,
+			Payload: &event.BoardStateEvent{
+				State: m.game.FEN(),
+			},
+		})
 	}
 
 	var winner *user.User
@@ -63,17 +76,12 @@ func (m *Match) Start(resultChan chan<- *Result) {
 	}
 }
 
-func (m *Match) broadcastTable() {
+func (m *Match) broadcast(e *event.HubEvent) {
 	for _, u := range []*user.User{m.White, m.Black} {
 		go func(u *user.User) {
-			err := connection.WriteEvent(u, &event.HubEvent{
-				Action: event.BoardState,
-				Payload: &event.BoardStateEvent{
-					State: m.game.FEN(),
-				},
-			})
+			err := connection.WriteEvent(u, e)
 			if err != nil {
-				log.Println("Error reporting to client about error lol")
+				log.Println("Error reporting to client about error lol", err)
 			}
 		}(u)
 	}
