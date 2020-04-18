@@ -23,6 +23,11 @@ type RawEvent struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
+type LobbyUpdateEvent struct {
+	Connected  int      `json:"connected"`
+	Registered []string `json:"registered`
+}
+
 type RegisterEvent struct {
 	Name string `json:"name"`
 }

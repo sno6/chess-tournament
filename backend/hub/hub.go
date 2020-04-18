@@ -103,6 +103,8 @@ func (h *Hub) connect(e *event.HubEvent) error {
 	h.users[e.Conn] = &user.User{Name: nil, Conn: e.Conn, MoveStream: make(chan string)}
 	h.mux.Unlock()
 
+	h.broadcastLobbyUpdate()
+
 	return nil
 }
 
@@ -124,6 +126,8 @@ func (h *Hub) userRegister(e *event.HubEvent) error {
 	h.users[e.Conn].Name = &re.Name
 	h.users[e.Conn].Registered = true
 	h.mux.Unlock()
+
+	h.broadcastLobbyUpdate()
 
 	h.logger.Printf("New user %s has registered for a tournament\n", re.Name)
 	return nil
@@ -161,4 +165,26 @@ func (h *Hub) eligibleUsers() []*user.User {
 	}
 
 	return users
+}
+
+func (h *Hub) broadcastLobbyUpdate() {
+	var names []string
+	for _, u := range h.users {
+		if u.Registered && u.Status == user.InTournamentLobby {
+			names = append(names, *u.Name)
+		}
+	}
+
+	for _, u := range h.users {
+		err := connection.WriteEvent(u, &event.HubEvent{
+			Action: event.LobbyUpdate,
+			Payload: event.LobbyUpdateEvent{
+				Connected:  len(h.users),
+				Registered: names,
+			},
+		})
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }

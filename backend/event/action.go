@@ -13,8 +13,10 @@ const (
 	UserResigned
 	UserOfferedDraw
 	UserAcceptedDraw
+	UserDeclinedDraw
 
 	// User sent actions.
+	LobbyUpdate
 	InvalidMove
 	BoardState
 	MatchStarted
