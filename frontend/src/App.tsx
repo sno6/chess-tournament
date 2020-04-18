@@ -1,13 +1,11 @@
 import React, {useEffect} from 'react'
 import {BrowserRouter as Router, Route, Switch} from 'react-router-dom'
-import {StylesProvider} from '@material-ui/core/styles'
-import {ThemeProvider} from 'styled-components'
+import {useDispatch} from 'react-redux'
 
 import 'normalize.css/normalize.css'
 import './App.css'
 
 import Game from './components/containers/Game'
-import theme from './theme'
 import Lobby from './components/containers/Lobby'
 import ChessService from './utils/ChessService'
 
@@ -17,21 +15,20 @@ const routes = {
 }
 
 const App: React.FC = () => {
+  const dispatch = useDispatch()
+
   useEffect(() => {
+    ChessService.dispatch = dispatch
     ChessService.connect()
-  }, [])
+  }, [dispatch])
 
   return (
-    <StylesProvider injectFirst>
-      <ThemeProvider theme={theme}>
-        <Router>
-          <Switch>
-            <Route path={routes.lobby} exact component={Lobby}/>
-            <Route path={routes.game} component={Game}/>
-          </Switch>
-        </Router>
-      </ThemeProvider>
-    </StylesProvider>
+    <Router>
+      <Switch>
+        <Route path={routes.lobby} exact component={Lobby}/>
+        <Route path={routes.game} component={Game}/>
+      </Switch>
+    </Router>
   )
 }
 
