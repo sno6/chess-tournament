@@ -1,26 +1,26 @@
 package event
 
-type Action uint
+type Action string
 
 const (
 	// System actions.
-	Connect Action = iota
-	Disconnect
+	Connect    Action = "Connect"
+	Disconnect        = "Disconnect"
 
 	// User recieved actions.
-	UserRegister
-	UserMoved
-	UserResigned
-	UserOfferedDraw
-	UserAcceptedDraw
-	UserDeclinedDraw
+	UserRegister     = "UserRegister"
+	UserMoved        = "UserMoved"
+	UserResigned     = "UserResigned"
+	UserOfferedDraw  = "UserOfferedDraw"
+	UserAcceptedDraw = "UserAcceptedDraw"
+	UserDeclinedDraw = "UserDeclinedDraw"
 
 	// User sent actions.
-	LobbyUpdate
-	InvalidMove
-	BoardState
-	MatchStarted
-	MatchOutcome
-	TournamentStarted
-	TournamentOutcome
+	LobbyUpdate       = "LobbyUpdate"
+	InvalidMove       = "InvalidMove"
+	BoardState        = "BoardState"
+	MatchStarted      = "MatchStarted"
+	MatchOutcome      = "MatchOutcome"
+	TournamentStarted = "TournamentStarted"
+	TournamentOutcome = "TournamentOutcome"
 )
