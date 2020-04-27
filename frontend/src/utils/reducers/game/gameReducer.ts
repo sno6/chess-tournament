@@ -1,4 +1,4 @@
-import {GameActions, GameActionType, GameStartedAction} from './gameActions'
+import {GameActions, GameActionType, GameStartedAction, GameUpdatedAction} from './gameActions'
 import {User} from '../../User'
 import {GameStatus} from '../../GameStatus'
 import {GameResult} from '../../GameResult'
@@ -6,15 +6,21 @@ import {GameResult} from '../../GameResult'
 export interface GameState {
   white: null | User;
   black: null | User;
-  status: null | GameStatus;
-  result: null | GameResult;
+  status: GameStatus;
+  result: GameResult;
+  fen: string;
 }
 
 const initialState = {
   white: null,
   black: null,
-  status: null,
-  result: null
+  status: GameStatus.NotStarted,
+  result: GameResult.None,
+  fen: ''
+  // white: {name: 'Tester'},
+  // black: {name: 'Chester'},
+  // status: GameStatus.Ready,
+  // result: GameResult.None
 }
 
 export default function gameReducer(
@@ -29,7 +35,15 @@ export default function gameReducer(
         white: { name: payload.white },
         black: { name: payload.black },
         status: GameStatus.Ready,
-        result: null
+        result: GameResult.None,
+        fen: '',
+      }
+    }
+    case GameActionType.Updated: {
+      const {payload} = action as GameUpdatedAction
+      return {
+        ...state,
+        fen: payload.state
       }
     }
     default:

@@ -10,21 +10,21 @@ interface BoardCellProps {
   isSelected: boolean;
   isHovered: boolean;
   isLegalMove: boolean;
+  isLegalCapture: boolean;
   isInCheck: boolean;
   isCheckmate: boolean;
 }
 
 const StyledDiv = styled.div`
+  flex: 1;
   position: relative;
-  width: 12.5%;
-  height: 12.5%;
   background-color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   
   &.alternate {
-    background-color: #b7cee2
+    background-color: #b7cee2;
   }
   
   &.legal-move::after {
@@ -32,10 +32,21 @@ const StyledDiv = styled.div`
     display: block;
     position: absolute;
     z-index: 1;
-    width: 75%;
-    height: 75%;
+    width: 40%;
+    height: 40%;
     border-radius: 50%;
-    background-color: #82c5a0;
+    background-color: rgba(130, 197, 160, 0.6);
+  }
+  
+  &.legal-capture::after {
+    content: '';
+    display: block;
+    position: absolute;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    background-size: 100% 100%;
+    background: radial-gradient(circle at center, transparent 72%, rgba(130, 197, 160, 0.6) 72.5%) 50% 50%;
   }
   
   &.in-check {
@@ -66,21 +77,23 @@ const BoardCell: React.FC<BoardCellProps> = ({
   isSelected,
   isHovered,
   isLegalMove,
+  isLegalCapture,
   isInCheck,
-  isCheckmate,
+  isCheckmate
 }) => {
   const className = [
     isAlternate ? 'alternate' : '',
     isHovered ? 'hover' : '',
     isSelected ? 'selected' : '',
     isLegalMove ? 'legal-move' : '',
+    isLegalCapture ? 'legal-capture' : '',
     isInCheck ? 'in-check' : '',
     isCheckmate ? 'checkmate' : ''
   ].join(' ').trim()
 
   return (
     <StyledDiv className={className}>
-      {piece && <ChessPiece piece={piece} />}
+      {piece && <ChessPiece piece={piece}/>}
     </StyledDiv>
   )
 }

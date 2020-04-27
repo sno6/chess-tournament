@@ -1,18 +1,22 @@
-import React, {useState} from 'react'
+import React, {useEffect, useState} from 'react'
+import {useSelector} from 'react-redux'
 import styled from 'styled-components'
-import {Square} from 'chess.js'
+import {Piece, PieceType, Square} from 'chess.js'
+import Box from '@material-ui/core/Box'
 
 import BoardCell from './BoardCell'
 import ChessService from '../utils/ChessService'
 import getPositionFromEvent from '../utils/getPositionFromEvent'
 import getSquareFromPosition from '../utils/getSquareFromPosition'
+import {PlayerColor} from '../utils/PlayerColor'
+import {colorSelector, fenSelector} from '../utils/reducers/game/gameSelectors'
 
 const ChessContainer = styled.div`
   position: relative;
   width: 66vmin;
   height: 66vmin;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   margin: auto;
   border: 16px solid #aaa;
 `
@@ -31,10 +35,17 @@ const EventsOverlay = React.memo(styled.div`
 const ChessBoard: React.FC = () => {
   const [selectedSquare, setSelectedSquare] = useState<null | Square>(null)
   const [hoverPosition, setHoverPosition] = useState<null | number[]>(null)
+  const [board, setBoard] = useState<Array<Array<{ type: PieceType; color: 'w' | 'b' } | null>>>([])
 
   const { chessInstance } = ChessService
-  const player: any = chessInstance.BLACK
-  const isInverted = player === chessInstance.BLACK
+  const color = useSelector(colorSelector)
+  const fen = useSelector(fenSelector)
+  const isInverted = color === PlayerColor.Black
+
+  useEffect(() => {
+    chessInstance.load(fen)
+    setBoard([...chessInstance.board()])
+  }, [fen])
 
   const onBoardClick = (evt: React.MouseEvent) => {
     if (chessInstance.game_over()) {
@@ -63,13 +74,13 @@ const ChessBoard: React.FC = () => {
           if (!move) {
             console.info(`Invalid move: ${selectedSquare} -> ${square}`)
           } else {
-            ChessService.sendMove('') // TODO
+            ChessService.sendMove() // TODO
             setSelectedSquare(null)
           }
         }
       }
-    } else if (piece && piece.color === chessInstance.turn()) {
-      // If a piece is on the clicked square and is the same color as whose turn it is, select it
+    } else if (piece && piece.color === color) {
+      // If a piece is on the clicked square and is the player's piece, select it
       setSelectedSquare(square)
     }
   }
@@ -88,11 +99,10 @@ const ChessBoard: React.FC = () => {
       .map(move => move.to)
     : []
 
-  // TODO optimise by making board component state, only updating it when a move is made
-  const board = chessInstance.board()
-  const cells: Array<{ cell: JSX.Element; index: number}> = []
+  const rows: Array<Array<{ cell: JSX.Element; index: number}>> = []
 
   board.forEach((row, i) => {
+    const rowCells: Array<{ cell: JSX.Element; index: number}> = []
     row.forEach((piece, j) => {
       const rank = 8 - i
       const file = j + 1
@@ -108,7 +118,11 @@ const ChessBoard: React.FC = () => {
       const isSelected = !!selectedSquare &&
         selectedSquare === getSquareFromPosition([rank, file])
 
-      const isLegalMove = legalMoves.includes(square)
+      const isLegal = legalMoves.includes(square)
+      const pieceOnSquare = chessInstance.get(square)
+
+      const isLegalMove = isLegal && !pieceOnSquare
+      const isLegalCapture = isLegal && !!pieceOnSquare
 
       const isCheckmate = !!piece &&
         piece.type === chessInstance.KING &&
@@ -128,21 +142,30 @@ const ChessBoard: React.FC = () => {
         isHovered={isHovered}
         isSelected={isSelected}
         isLegalMove={isLegalMove}
+        isLegalCapture={isLegalCapture}
         isInCheck={isInCheck}
         isCheckmate={isCheckmate}
       />
 
-      cells.push({ cell, index })
+      rowCells.push({ cell, index })
     })
+    rows.push(rowCells)
+    if (isInverted) {
+      rowCells.reverse()
+    }
   })
 
   if (isInverted) {
-    cells.reverse()
+    rows.reverse()
   }
 
   return (
     <ChessContainer>
-      {cells.map(({ cell }) => cell)}
+      {rows.map((row, index) => (
+        <Box key={index} display="flex" flex={1}>
+          { row.map(({ cell }) => cell) }
+        </Box>
+      ))}
       <EventsOverlay
         onClick={onBoardClick}
         onMouseOver={onBoardMouseMove}

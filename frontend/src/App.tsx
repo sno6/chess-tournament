@@ -3,16 +3,11 @@ import {BrowserRouter as Router, Route, Switch} from 'react-router-dom'
 import {useDispatch} from 'react-redux'
 
 import 'normalize.css/normalize.css'
-import './App.css'
 
 import Game from './components/containers/Game'
 import Lobby from './components/containers/Lobby'
 import ChessService from './utils/ChessService'
-
-const routes = {
-  lobby: '/',
-  game: '/game'
-}
+import {routes} from './routes'
 
 const App: React.FC = () => {
   const dispatch = useDispatch()

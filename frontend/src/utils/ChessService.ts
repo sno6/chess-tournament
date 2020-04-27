@@ -4,6 +4,8 @@ import Chess, {ChessInstance} from 'chess.js'
 import {ReceiveEvent} from './ReceiveEvent'
 import {SendEvent} from './SendEvent'
 import {lobbyUpdate} from './reducers/lobby/lobbyActions'
+import {gameStarted, gameUpdated} from './reducers/game/gameActions'
+import {userUpdate} from './reducers/user/userActions'
 
 interface ReceivedMessage {
   action: ReceiveEvent;
@@ -25,6 +27,7 @@ class ChessService {
   }
 
   set dispatch(dispatcher: (action: Action) => any) {
+    // TODO: change this to user redux middleware instead
     this._dispatch = dispatcher
   }
 
@@ -72,21 +75,25 @@ class ChessService {
           break
         case ReceiveEvent.BoardState:
           console.info('Update game state:', payload)
-          this.chessInstance.load(payload.state)
+          this._dispatch(gameUpdated(payload))
           break
         case ReceiveEvent.InvalidMove:
           console.error('Invalid move sent:', payload)
           break
         case ReceiveEvent.MatchStarted:
-          // TODO
+          console.info('Match started:', payload)
+          this._dispatch(gameStarted(payload))
           break
         case ReceiveEvent.MatchOutcome:
+          console.info('Match outcome:', payload)
           // TODO
           break
         case ReceiveEvent.TournamentStarted:
+          console.info('Tournament started:', payload)
           // TODO
           break
         case ReceiveEvent.TournamentOutcome:
+          console.info('Tournament outcome:', payload)
           // TODO
           break
         default:
@@ -106,9 +113,13 @@ class ChessService {
 
   registerUser(name: string) {
     this.send(SendEvent.UserRegister, { name })
+    // TODO: ask for BE to add registration success
+    this._dispatch(userUpdate({ name, isRegistered: true }))
   }
 
-  sendMove(move: string) {
+  sendMove() {
+    const history = this.chessInstance.history()
+    const move = history[history.length - 1]
     console.log('sending move:', move)
     this.send(SendEvent.UserMoved, { move })
   }
